@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # ZEROTH — integrated DeFi hackathon MVP
 
 A DeFi Saver-inspired, **independently designed** multi-workspace UI with ZEROTH's original dark/mint/blue visual language, a Node backend, wallet authentication, authenticated persisted policy drafts, indicative auctions, and opt-in blockchain integrations.
@@ -73,3 +74,6 @@ The front-end includes a legacy browser-local policy draft interface as well as 
 
 - Aave V3 Pool: https://aave.com/docs/aave-v3/smart-contracts/pool
 - 0x Swap API: https://docs.0x.org/docs/introduction/quickstart/swap-tokens-with-0x-swap-api
+=======
+
+>>>>>>> 19f84aa606baaa74c72609f41bab3f835697f159
