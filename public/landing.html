@@ -1,0 +1,505 @@
+<title>Zeroth: On-chain lending, trading and collateral protection</title>
+<meta name="description" content="Zeroth is a fully on-chain platform for lending, trading and collateral protection: policy automation, flash liquidity and interest rate auctions.">
+<meta name="theme-color" content="#030304">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 44'%3E%3Crect width='40' height='44' rx='9' fill='%23050506'/%3E%3Cpath d='M20 5 34 13v18L20 39 6 31V13z' fill='none' stroke='%23e8f3f7' stroke-width='3'/%3E%3Cpath d='M33 13 7 31' stroke='%234be07a' stroke-width='3'/%3E%3C/svg%3E">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700;800;900&display=swap">
+<style>
+/* Layout follows the reference: centered pill nav, swirl hero with three stat cards laid over it,
+   divided "Advantages" columns with orbit icons, centered side-dimmed carousel, partner cards, footer. */
+:root {
+  --bg: #030304;
+  --fg: #f4f5f5;
+  --muted: #9a9ea0;
+  --dim: #5c6062;
+  --line: rgba(255,255,255,.12);
+  --line-strong: rgba(255,255,255,.24);
+  --glass-a: rgba(255,255,255,.085);
+  --glass-b: rgba(255,255,255,.02);
+  --accent: #8fe3cf;
+  --display: "Inter Tight", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --mono: "Inter Tight", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --gut: max(16px, calc((100vw - 1180px) / 2));
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--display); font-size: 16px; line-height: 1.5;
+  padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px));
+  overflow-x: hidden;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 60; background: var(--bg); }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+h1, h2, h3, p { margin: 0; }
+.wrap { max-width: 1180px; margin-inline: auto; }
+.stars { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+main, header, footer { position: relative; z-index: 1; }
+
+/* nav */
+.navbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; margin-inline: calc(50% - 50vw); padding-inline: calc(50vw - 50%); background: rgba(3,3,4,.62); backdrop-filter: blur(18px) saturate(1.2); -webkit-backdrop-filter: blur(18px) saturate(1.2); border-bottom: 1px solid transparent; transition: border-color .3s, background .3s; }
+.navbar.stuck { border-bottom-color: var(--line); background: rgba(3,3,4,.8); }
+.nav { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; padding-block: 14px; }
+section[id], main { scroll-margin-top: 84px; }
+.logo { display: inline-flex; align-items: center; gap: 10px; font-size: 26px; font-weight: 400; letter-spacing: .01em; justify-self: start; }
+.logo .mark { width: 34px; height: 37px; flex: none; filter: drop-shadow(0 0 10px rgba(120,190,220,.25)); }
+.logo .wm { font-weight: 700; font-size: 20px; letter-spacing: .09em; line-height: 1; }
+.links { display: flex; gap: 2px; padding: 3px; border-radius: 999px; }
+.links a { padding: 6px 16px; border-radius: 999px; font-family: var(--mono); font-size: 12px; color: var(--muted); border: 1px solid transparent; transition: color .2s; }
+.links a:hover { color: var(--fg); }
+.links a.on { color: var(--fg); background: rgba(255,255,255,.07); border-color: var(--line-strong); }
+.nav-r { justify-self: end; display: flex; gap: 10px; align-items: center; }
+.btn { display: inline-flex; align-items: center; justify-content: center; padding: 9px 18px; border-radius: 999px; border: 1px solid var(--line-strong); background: rgba(255,255,255,.1); font-family: var(--mono); font-size: 11.5px; transition: background .2s; }
+.btn:hover { background: rgba(255,255,255,.18); }
+@media (max-width: 760px) { .links { display: none; } .nav { grid-template-columns: 1fr auto; } }
+
+/* glass */
+.glass { background: linear-gradient(150deg, var(--glass-a), var(--glass-b) 60%); border: 1px solid var(--line); border-radius: 22px; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+
+/* hero */
+.hero { position: relative; text-align: center; padding-block: 28px 0; }
+#swirl { position: absolute; left: 50%; top: 0; width: 100vw; height: 100%; transform: translateX(-50%); pointer-events: none; z-index: 0; }
+.hero > *:not(canvas) { position: relative; z-index: 1; }
+.badge { font-family: var(--mono); display: inline-flex; align-items: center; gap: 8px; padding: 5px 14px; border-radius: 999px; border: 1px solid var(--line-strong); background: rgba(255,255,255,.06); font-size: 11px; color: var(--muted); }
+.badge i { width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--muted); display: inline-block; position: relative; }
+.badge i::after { content: ""; position: absolute; inset: 2px; border-radius: 50%; background: var(--accent); }
+.hero h1 { font-size: clamp(2.3rem, 5.4vw, 3.7rem); line-height: 1.08; font-weight: 400; letter-spacing: -.015em; margin: 24px auto 16px; max-width: 20ch; text-wrap: balance; text-shadow: 0 0 40px rgba(255,255,255,.16); }
+.nb { white-space: nowrap; }
+.hero .sub { max-width: 50ch; margin: 0 auto 26px; color: var(--muted); font-family: var(--mono); font-size: 13px; line-height: 1.65; }
+.go { display: inline-flex; padding: 12px 34px; border-radius: 999px; font-family: var(--mono); font-size: 13px; background: rgba(143,227,207,.08); border: 1px solid rgba(143,227,207,.55); box-shadow: 0 0 30px rgba(143,227,207,.14) inset, 0 0 36px rgba(143,227,207,.12); transition: background .2s; }
+.go:hover { background: rgba(143,227,207,.18); }
+.orb { position: absolute !important; z-index: 1; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.14), rgba(255,255,255,.03) 70%); border: 1px solid var(--line-strong); box-shadow: 0 0 0 10px rgba(255,255,255,.035), 0 0 0 11px rgba(255,255,255,.06), 0 18px 50px rgba(0,0,0,.8); backdrop-filter: blur(6px); animation: float 7s ease-in-out infinite; }
+.orb svg { width: 50%; height: 50%; }
+.orb.a { width: 74px; height: 74px; left: 12%; top: 64px; }
+.orb.b { width: 74px; height: 74px; right: 12%; top: 22px; animation-delay: -2s; }
+.orb.c { width: 68px; height: 68px; left: 24%; top: 380px; animation-delay: -4s; }
+.orb.d { width: 68px; height: 68px; right: 23%; top: 366px; animation-delay: -1s; }
+@keyframes float { 50% { transform: translateY(-12px); } }
+@media (max-width: 960px) { .orb { display: none; } }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 190px; text-align: left; }
+.hero > .stats { z-index: 2; }
+@media (max-width: 960px) { .stats { margin-top: 90px; } }
+.stat { padding: 22px 22px 26px; display: grid; gap: 14px; min-width: 0; border-radius: 18px; box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 24px 60px rgba(0,0,0,.45); }
+.ico { width: 38px; height: 38px; border-radius: 10px; background: rgba(255,255,255,.1); border: 1px solid var(--line-strong); display: grid; place-items: center; }
+.ico svg { width: 20px; height: 20px; }
+.stat .lab { font-family: var(--mono); font-size: 13px; color: #cfd2d2; }
+.stat .num { font-family: var(--mono); font-weight: 700; font-size: clamp(22px, 3vw, 28px); letter-spacing: -.03em; margin-top: -6px; text-shadow: 0 0 22px rgba(255,255,255,.35); }
+.src { text-align: left; font-family: var(--mono); font-size: 10.5px; color: var(--dim); margin-top: 12px; }
+@media (max-width: 760px) { .stats { grid-template-columns: 1fr; } }
+
+/* advantages (divided columns) */
+.adv { margin-top: 110px; }
+.adv-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-bottom: 30px; }
+.adv-head h2 { font-size: clamp(2.2rem, 5vw, 3.4rem); font-weight: 300; letter-spacing: -.01em; }
+.arrows { display: flex; gap: 10px; }
+.arrow { width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--line-strong); background: rgba(255,255,255,.07); display: grid; place-items: center; transition: background .2s; }
+.arrow.solid { background: rgba(255,255,255,.14); }
+.arrow:hover { background: rgba(255,255,255,.2); }
+.arrow[disabled] { opacity: .35; cursor: default; background: rgba(255,255,255,.04); }
+.arrow.solid:not([disabled]) { box-shadow: 0 0 22px rgba(255,255,255,.12); }
+.arrow svg { width: 18px; height: 18px; }
+.adv-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; border-top: 1px solid var(--line); margin-inline: calc(-1 * var(--gut)); padding-inline: var(--gut); scroll-padding-inline: var(--gut); }
+.adv-track::-webkit-scrollbar { display: none; }
+.adv-item { flex: 0 0 33.3333%; scroll-snap-align: start; border-left: 1px solid var(--line); padding: 34px 28px 54px; min-width: 0; }
+.adv-item:first-child { border-left: 0; padding-left: 0; }
+.orbit { position: relative; width: 100%; max-width: 330px; height: 250px; margin-bottom: 26px; }
+.orbit::before { content: ""; position: absolute; left: 50%; top: 50%; width: 220px; height: 220px; transform: translate(-50%, -50%); background: radial-gradient(circle, rgba(255,255,255,.14), rgba(255,255,255,0) 66%); pointer-events: none; }
+.orbit > svg.rings { position: absolute; inset: 0; width: 100%; height: 100%; }
+.orbit > svg.art { position: absolute; left: 50%; top: 50%; width: 130px; height: 130px; transform: translate(-50%, -50%); filter: drop-shadow(0 0 22px rgba(255,255,255,.18)); }
+.pill { position: absolute; padding: 9px 20px; border-radius: 16px; font-family: var(--mono); font-size: 11px; box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 10px 30px rgba(0,0,0,.5); background: linear-gradient(150deg, rgba(255,255,255,.12), rgba(255,255,255,.03)); border: 1px solid var(--line-strong); backdrop-filter: blur(10px); white-space: nowrap; }
+.adv-item h3 { font-size: 22px; font-weight: 400; margin-bottom: 10px; letter-spacing: -.005em; }
+.adv-item p { font-family: var(--mono); font-size: 11.5px; line-height: 1.7; color: var(--muted); max-width: 38ch; }
+@media (max-width: 900px) { .adv-item { flex-basis: 50%; } }
+@media (max-width: 560px) { .adv-item { flex-basis: 88%; } .adv-item:first-child { padding-left: 0; } }
+
+/* centered carousel */
+.car { margin-top: 130px; text-align: center; }
+.car h2 { font-size: clamp(2.2rem, 5vw, 3.4rem); font-weight: 300; }
+.track { --cw: min(300px, 74vw); display: flex; gap: 22px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding-block: 44px 30px; padding-inline: calc(50vw - var(--cw) / 2); scroll-padding-inline: calc(50vw - var(--cw) / 2); margin-inline: calc(50% - 50vw); text-align: left; }
+.track::-webkit-scrollbar { display: none; }
+.card { flex: 0 0 var(--cw); scroll-snap-align: center; padding: 22px 22px 28px; min-height: 350px; display: flex; flex-direction: column; opacity: .35; transform: scale(.9); filter: blur(.4px); transition: opacity .35s, transform .35s, filter .35s, border-color .35s; }
+.card.is-active { opacity: 1; transform: scale(1); filter: none; border-color: var(--line-strong); box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 0 80px rgba(255,255,255,.07); }
+.card .art { height: 150px; display: grid; place-items: center; margin-bottom: 14px; }
+.card .art svg { width: 116px; height: 116px; color: var(--fg); filter: drop-shadow(0 0 20px rgba(255,255,255,.22)); }
+.card h3 { font-size: 22px; font-weight: 400; line-height: 1.25; margin-bottom: 10px; }
+.card p { font-family: var(--mono); font-size: 11.5px; line-height: 1.7; color: var(--muted); }
+.car .arrows { justify-content: center; }
+
+/* partners */
+.part { margin-top: 110px; text-align: center; }
+.part h2 { font-size: clamp(2.2rem, 5vw, 3.4rem); font-weight: 300; margin-bottom: 40px; }
+.logos { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; max-width: 760px; margin-inline: auto; }
+.logos .glass { flex: 0 0 calc(33.333% - 11px); height: 92px; display: grid; place-items: center; border-radius: 18px; font-size: 24px; font-weight: 500; letter-spacing: -.01em; }
+.logos .glass small { display: block; font-size: 10px; color: var(--dim); font-weight: 400; letter-spacing: 0; margin-top: 2px; font-family: var(--mono); }
+@media (max-width: 640px) { .logos .glass { flex-basis: calc(50% - 8px); font-size: 19px; } }
+
+/* footer */
+footer { margin-top: 120px; border-top: 1px solid var(--line); padding-block: 40px 56px; display: flex; justify-content: space-between; gap: 40px; flex-wrap: wrap; }
+.about { max-width: 300px; display: grid; gap: 16px; font-family: var(--mono); font-size: 11.5px; line-height: 1.7; color: var(--muted); }
+.cols { display: flex; gap: 64px; flex-wrap: wrap; }
+.col { display: grid; gap: 10px; align-content: start; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.col b { color: var(--fg); font-family: var(--display); font-weight: 400; font-size: 14px; margin-bottom: 6px; }
+.col a:hover { color: var(--fg); }
+#toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); opacity: 0; transition: .3s; background: #141718; border: 1px solid var(--line-strong); padding: 10px 18px; border-radius: 999px; font-size: 13px; z-index: 70; pointer-events: none; max-width: calc(100vw - 32px); }
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .orb { animation: none; } .card { transition: none; } }
+
+/* ---- typography: bold tight caps for headlines, light grotesk for body ---- */
+body { font-weight: 300; letter-spacing: -.012em; }
+.hero h1, .adv-head h2, .car h2, .part h2 { text-transform: uppercase; font-weight: 800; letter-spacing: -.04em; line-height: .94; }
+.hero h1 { font-size: clamp(2.3rem, 5.5vw, 4.1rem); margin: 34px auto 20px; max-width: min(100%, 860px); text-shadow: 0 0 50px rgba(255,255,255,.14); }
+.adv-head h2, .car h2, .part h2 { font-size: clamp(2rem, 5.6vw, 4rem); }
+.hero .sub { font-size: 16px; line-height: 1.45; font-weight: 300; max-width: 46ch; color: #aeb3b3; }
+.links a, .btn, .go { font-size: 13px; font-weight: 400; letter-spacing: -.01em; }
+.go { font-weight: 500; }
+.logo .wm { font-weight: 800; letter-spacing: .06em; }
+.stat .lab { font-size: 15px; font-weight: 300; }
+.stat .num { font-weight: 800; font-size: clamp(26px, 3.4vw, 34px); letter-spacing: -.04em; }
+.src { font-size: 12px; }
+.adv-item h3, .card h3 { font-weight: 600; letter-spacing: -.025em; }
+.adv-item p, .card p { font-size: 14px; line-height: 1.5; font-weight: 300; }
+.pill { font-size: 12.5px; font-weight: 400; }
+.logos .glass { font-weight: 700; letter-spacing: -.03em; }
+.logos .glass small { font-size: 12px; font-weight: 300; }
+.about { font-size: 14px; line-height: 1.5; font-weight: 300; }
+.col { font-size: 13.5px; font-weight: 300; }
+.col b { font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: -.01em; }
+
+/* ---- professional polish ---- */
+.eyebrow { font-size: 12px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 0 0 16px; }
+.car .eyebrow, .part .eyebrow, .how .eyebrow { text-align: center; }
+.lede { max-width: 52ch; margin: 14px auto 0; color: var(--muted); font-size: 16px; line-height: 1.5; text-align: center; }
+.cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.go.solid { background: #fff; color: #050505; border-color: #fff; box-shadow: none; font-weight: 500; }
+.go.solid:hover { background: #e4e6e6; }
+.go.ghost { background: transparent; box-shadow: none; border-color: var(--line-strong); }
+.go.ghost:hover { background: rgba(255,255,255,.07); }
+.how, .closing { padding-block: clamp(72px, 10vw, 130px) 0; text-align: center; }
+.how h2, .closing h2 { text-transform: uppercase; font-weight: 800; letter-spacing: -.04em; line-height: .96; font-size: clamp(2rem, 5.2vw, 3.6rem); margin: 0 auto; max-width: 24ch; text-wrap: balance; }
+.steps { list-style: none; padding: 0; margin: 52px 0 0; display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); text-align: left; }
+.steps li { padding: 30px 32px 8px; border-left: 1px solid var(--line); }
+.steps li:first-child { border-left: 0; padding-left: 0; }
+.steps .n { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.steps h3 { font-size: 22px; font-weight: 600; letter-spacing: -.025em; margin: 34px 0 10px; }
+.steps p { color: var(--muted); font-size: 14px; line-height: 1.5; max-width: 34ch; margin: 0; }
+.eco { list-style: none; padding: 0; margin: 40px 0 0; display: grid; grid-template-columns: repeat(5, 1fr); border-block: 1px solid var(--line); }
+.eco li { padding: 30px 12px; border-left: 1px solid var(--line); font-size: 20px; font-weight: 700; letter-spacing: -.03em; text-align: center; }
+.eco li:first-child { border-left: 0; }
+.eco small { display: block; margin-top: 6px; font-size: 12px; font-weight: 300; letter-spacing: 0; color: var(--muted); }
+.legal { display: flex; justify-content: space-between; gap: 12px 24px; flex-wrap: wrap; padding-block: 22px 34px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+@media (max-width: 760px) {
+  .steps { grid-template-columns: 1fr; }
+  .steps li, .steps li:first-child { border-left: 0; border-top: 1px solid var(--line); padding: 26px 0 8px; }
+  .steps li:first-child { border-top: 0; }
+  .eco { grid-template-columns: 1fr 1fr; }
+  .eco li { border-top: 1px solid var(--line); } .eco li:nth-child(odd) { border-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="gw" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#6d7274"/></linearGradient>
+    <linearGradient id="gd" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b9bec0"/><stop offset="1" stop-color="#2a2e30"/></linearGradient>
+    <linearGradient id="gm" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e8eaeb"/><stop offset="1" stop-color="#555a5c"/></linearGradient>
+  </defs>
+</svg>
+<canvas class="stars" id="stars" aria-hidden="true"></canvas>
+
+<div class="navbar" id="navbar"><header class="nav wrap">
+  <a class="logo" href="#top" aria-label="Zeroth home"><svg class="mark" viewBox="0 0 40 44" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><defs><clipPath id="hx1"><path d="M20 2.5 36.5 12v20L20 41.5 3.5 32V12z"/></clipPath></defs><g clip-path="url(#hx1)"><path d="M21 4 3 26" stroke="#2f6bff" stroke-width="2"/><path d="M6 15l11 4.5" stroke="#2f6bff" stroke-width="1.6"/><path d="M35 11 5 31" stroke="#4be07a" stroke-width="2"/><path d="M33 17 13 38" stroke="#4be07a" stroke-width="1.5"/><path d="M22.5 27 29 38" stroke="#4be07a" stroke-width="1.8"/></g><path d="M20 2.5 36.5 12v20L20 41.5 3.5 32V12z" stroke="#e8f3f7" stroke-width="2.2"/><ellipse cx="20" cy="22.2" rx="5" ry="8.4" stroke="#e8f3f7" stroke-width="2.2"/></svg><span class="wm">ZEROTH</span></a>
+  <nav class="links glass" style="border-radius:999px" aria-label="Sections">
+    <a class="on" href="#top">Home</a><a href="#advantages">Advantages</a><a href="#modules">Modules</a><a href="#partners">Partners</a>
+  </nav>
+  <div class="nav-r"><button class="btn" id="connect" type="button">Connect wallet</button></div>
+</header></div>
+
+<main id="top">
+<div class="wrap">
+  <section class="hero" id="hero">
+    <canvas id="swirl" aria-hidden="true"></canvas>
+    <div class="orb a" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"><path d="M12 2.5 15 5.5 12 8.5 9 5.5zM5.5 9 8.5 12 5.5 15 2.5 12zM18.5 9 21.5 12 18.5 15 15.5 12zM12 15.5 15 18.5 12 21.5 9 18.5zM9.2 12 12 9.2 14.8 12 12 14.8z"/></svg></div>
+    <div class="orb b" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"><path d="M12 2 5.5 12.2 12 16 18.5 12.2zM12 17.5 5.5 13.7 12 22l6.5-8.3z"/></svg></div>
+    <div class="orb c" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M12 3 21 20H3zM8.5 14.5h7"/></svg></div>
+    <div class="orb d" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"><path d="M5 5h5a7 7 0 0 1 0 14H5zM9 12h6"/></svg></div>
+    <h1>Best <span class="nb">On-chain</span> Lending Experience</h1>
+    <p class="sub">Borrow, switch positions and protect collateral with flash liquidity, interest rate auctions and policies that run 24/7 on smart contracts.</p>
+    <div class="cta"><a class="go solid" href="/app">Launch app</a><a class="go ghost" href="#how">How it works</a></div>
+
+    <div class="stats">
+      <div class="glass stat"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5"><circle cx="9" cy="12" r="6"/><path d="M15 6.5a6 6 0 0 1 0 11"/><path d="M9 9.5v5M7.5 10.8c0-.8.7-1.2 1.5-1.2s1.5.4 1.5 1.1"/></svg></div><div class="lab">DeFi Total Value Locked</div><div class="num">~$93B</div></div>
+      <div class="glass stat"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"><path d="M5 4h10l4 4v12H5z"/><path d="M9 16l6-6M9.5 10h.01M14.5 16h.01" stroke-linecap="round" stroke-width="2"/></svg></div><div class="lab">DEX Daily Trading Volume</div><div class="num">~$7.6B</div></div>
+      <div class="glass stat"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg></div><div class="lab">Target Quarterly User Growth</div><div class="num">20%</div></div>
+    </div>
+    <p class="src">Market figures are approximate industry estimates; the growth figure is a project target, not a guarantee.</p>
+  </section>
+
+  <section class="adv" id="advantages">
+    <p class="eyebrow">01 &mdash; Advantages</p>
+    <div class="adv-head">
+      <h2>Advantages</h2>
+      <div class="arrows">
+        <button class="arrow" id="aprev" type="button" aria-label="Previous"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"><path d="M20 12H4M10 6l-6 6 6 6"/></svg></button>
+        <button class="arrow solid" id="anext" type="button" aria-label="Next"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"><path d="M4 12h16M14 6l6 6-6 6"/></svg></button>
+      </div>
+    </div>
+    <div class="adv-track" id="atrack">
+      <article class="adv-item">
+        <div class="orbit">
+          <svg class="rings" viewBox="0 0 330 250" fill="none" stroke="rgba(255,255,255,.1)"><circle cx="165" cy="125" r="112"/><circle cx="165" cy="125" r="82"/><circle cx="165" cy="125" r="140" stroke-dasharray="2 6"/></svg>
+          <svg class="art" viewBox="0 0 130 130"><path d="M65 22 106 44v42L65 108 24 86V44z" fill="url(#gd)" stroke="rgba(255,255,255,.35)"/><path d="M24 44l41 22 41-22M65 66v42" stroke="rgba(255,255,255,.3)" fill="none"/><ellipse cx="58" cy="58" rx="26" ry="14" fill="none" stroke="url(#gw)" stroke-width="7" transform="rotate(-24 58 58)"/><ellipse cx="78" cy="68" rx="26" ry="14" fill="none" stroke="url(#gw)" stroke-width="7" transform="rotate(-24 78 68)"/></svg>
+          <span class="pill" style="left:2%;top:26%">Always on</span><span class="pill" style="right:2%;top:60%">Policy engine</span>
+        </div>
+        <h3>Always-on automation</h3>
+        <p>Rules for rescue and liquidation run around the clock on smart contracts. Nothing waits for a person to wake up.</p>
+      </article>
+      <article class="adv-item">
+        <div class="orbit">
+          <svg class="rings" viewBox="0 0 330 250" fill="none" stroke="rgba(255,255,255,.1)"><circle cx="165" cy="125" r="112"/><circle cx="165" cy="125" r="82"/><circle cx="165" cy="125" r="140" stroke-dasharray="2 6"/></svg>
+          <svg class="art" viewBox="0 0 130 130"><path d="M65 8l14 36 38 3-29 25 9 37-32-20-32 20 9-37-29-25 38-3z" fill="none" stroke="rgba(255,255,255,.28)"/><ellipse cx="65" cy="96" rx="30" ry="9" fill="url(#gd)"/><path d="M45 96V70h40v26" fill="url(#gm)" opacity=".7"/><ellipse cx="65" cy="70" rx="20" ry="6" fill="url(#gw)"/><circle cx="65" cy="52" r="16" fill="url(#gw)"/><circle cx="65" cy="52" r="9" fill="none" stroke="#222" stroke-width="2"/></svg>
+          <span class="pill" style="right:0;top:12%">Wallet only</span><span class="pill" style="left:0;top:62%">No sign-up</span>
+        </div>
+        <h3>Trustless environment</h3>
+        <p>No off-chain custody and no account to create. Connect your wallet, set a policy and start.</p>
+      </article>
+      <article class="adv-item">
+        <div class="orbit">
+          <svg class="rings" viewBox="0 0 330 250" fill="none" stroke="rgba(255,255,255,.1)"><circle cx="165" cy="125" r="112"/><circle cx="165" cy="125" r="82"/><circle cx="165" cy="125" r="140" stroke-dasharray="2 6"/></svg>
+          <svg class="art" viewBox="0 0 130 130"><ellipse cx="65" cy="100" rx="48" ry="14" fill="url(#gd)"/><ellipse cx="65" cy="94" rx="48" ry="14" fill="url(#gm)" opacity=".6"/><g fill="url(#gw)"><rect x="34" y="52" width="12" height="36" rx="2"/><rect x="58" y="34" width="12" height="46" rx="2"/><rect x="82" y="46" width="12" height="38" rx="2"/></g><g stroke="#fff" stroke-width="2"><path d="M40 44v8M40 88v6M64 24v10M64 80v8M88 38v8M88 84v6"/></g><path d="M16 74c20 12 46 12 70-6" fill="none" stroke="#fff" stroke-width="2.5" opacity=".7"/></svg>
+          <span class="pill" style="left:0;top:24%">Rescue</span><span class="pill" style="right:0;top:64%">Flash loan</span>
+        </div>
+        <h3>Collateral protection</h3>
+        <p>Loan health is tracked in real time. When LTV climbs, a rescue runs before a liquidation does.</p>
+      </article>
+      <article class="adv-item">
+        <div class="orbit">
+          <svg class="rings" viewBox="0 0 330 250" fill="none" stroke="rgba(255,255,255,.1)"><circle cx="165" cy="125" r="112"/><circle cx="165" cy="125" r="82"/><circle cx="165" cy="125" r="140" stroke-dasharray="2 6"/></svg>
+          <svg class="art" viewBox="0 0 130 130"><g fill="url(#gw)"><rect x="22" y="76" width="22" height="34" rx="3"/><rect x="54" y="52" width="22" height="58" rx="3"/><rect x="86" y="26" width="22" height="84" rx="3"/></g><path d="M18 56 62 34l50-24" stroke="#fff" stroke-width="2" fill="none" stroke-dasharray="3 5"/></svg>
+          <span class="pill" style="right:2%;top:14%">Auction</span><span class="pill" style="left:2%;top:64%">Best rate</span>
+        </div>
+        <h3>Rates found by bidding</h3>
+        <p>Interest rate auctions let users compete, so the rate comes from the market and not from a fixed formula.</p>
+      </article>
+      <article class="adv-item">
+        <div class="orbit">
+          <svg class="rings" viewBox="0 0 330 250" fill="none" stroke="rgba(255,255,255,.1)"><circle cx="165" cy="125" r="112"/><circle cx="165" cy="125" r="82"/><circle cx="165" cy="125" r="140" stroke-dasharray="2 6"/></svg>
+          <svg class="art" viewBox="0 0 130 130"><circle cx="40" cy="65" r="26" fill="url(#gd)" stroke="rgba(255,255,255,.4)"/><circle cx="90" cy="65" r="26" fill="url(#gw)" opacity=".85"/><path d="M44 36c10-10 32-10 42 0M86 94c-10 10-32 10-42 0" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/><path d="m80 30 8 6-9 6M50 100l-8-6 9-6" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="pill" style="left:0;top:20%">Swap</span><span class="pill" style="right:0;top:62%">Cross-asset</span>
+        </div>
+        <h3>Switch positions</h3>
+        <p>Move between supported crypto positions in one flow, with routing handled by the contracts.</p>
+      </article>
+      <article class="adv-item">
+        <div class="orbit">
+          <svg class="rings" viewBox="0 0 330 250" fill="none" stroke="rgba(255,255,255,.1)"><circle cx="165" cy="125" r="112"/><circle cx="165" cy="125" r="82"/><circle cx="165" cy="125" r="140" stroke-dasharray="2 6"/></svg>
+          <svg class="art" viewBox="0 0 130 130"><path d="M65 14 108 38v54L65 116 22 92V38z" fill="url(#gd)" stroke="rgba(255,255,255,.4)"/><path d="M65 14v50l43 28M65 64 22 92" fill="none" stroke="rgba(255,255,255,.3)"/><circle cx="65" cy="64" r="18" fill="url(#gw)"/><path d="M58 64h14M65 57v14" stroke="#222" stroke-width="2.5" stroke-linecap="round"/></svg>
+          <span class="pill" style="right:2%;top:16%">Tokenize</span><span class="pill" style="left:0;top:62%">On-chain</span>
+        </div>
+        <h3>Tokenized assets</h3>
+        <p>Turn real or digital assets into programmable tokens that policies and loans can work with.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="car" id="modules">
+    <p class="eyebrow">02 &mdash; Modules</p>
+    <h2>Modules</h2>
+    <p class="lede">Six building blocks that work on their own or together, all running on smart contracts.</p>
+    <div class="track" id="track" tabindex="0" aria-label="Zeroth modules">
+      <article class="glass card"><div class="art"><svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M60 14 98 36v48L60 106 22 84V36z"/><path d="M22 36l38 22 38-22M60 58v48"/><circle cx="60" cy="58" r="7" fill="currentColor" fill-opacity=".3"/></svg></div><h3>Asset Tokenization</h3><p>Convert real or digital assets into programmable on-chain tokens.</p></article>
+      <article class="glass card"><div class="art"><svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M20 34h80M20 60h80M20 86h80"/><circle cx="44" cy="34" r="8" fill="#030304"/><circle cx="76" cy="60" r="8" fill="#030304"/><circle cx="54" cy="86" r="8" fill="#030304"/><circle cx="76" cy="60" r="2.5" fill="currentColor"/></svg></div><h3>DeFi Policy Engine</h3><p>Automate financial rules and actions through smart contracts.</p></article>
+      <article class="glass card"><div class="art"><svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M60 12 100 28v30c0 26-17 42-40 50C37 100 20 84 20 58V28z"/><path d="M42 60l12 12 24-26" stroke-linecap="round"/></svg></div><h3>Collateral Protection</h3><p>Help protect user collateral during market movements.</p></article>
+      <article class="glass card"><div class="art"><svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><circle cx="60" cy="60" r="44"/><path d="M68 22 40 66h18l-6 32 28-44H62z" fill="currentColor" fill-opacity=".25"/></svg></div><h3>Flash Liquidity Loan</h3><p>Access instant liquidity without traditional collateral requirements.</p></article>
+      <article class="glass card"><div class="art"><svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M18 100h84"/><rect x="26" y="66" width="14" height="34" rx="2"/><rect x="53" y="46" width="14" height="54" rx="2"/><rect x="80" y="24" width="14" height="76" rx="2" fill="currentColor" fill-opacity=".25"/><path d="M26 54 60 34l34-18" stroke-dasharray="3 5"/></svg></div><h3>Interest Rate Auction</h3><p>Let users compete to discover better interest rates.</p></article>
+      <article class="glass card"><div class="art"><svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="34" cy="60" r="18"/><circle cx="86" cy="60" r="18"/><path d="M46 36c8-12 28-12 28 0M74 84c-8 12-28 12-28 0"/><path d="m70 33 4 3-5 4M50 87l-4-3 5-4"/></svg></div><h3>Cross-Asset Position Switching</h3><p>Switch between supported crypto positions seamlessly.</p></article>
+    </div>
+    <div class="arrows">
+      <button class="arrow" id="prev" type="button" aria-label="Previous module"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"><path d="M20 12H4M10 6l-6 6 6 6"/></svg></button>
+      <button class="arrow solid" id="next" type="button" aria-label="Next module"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"><path d="M4 12h16M14 6l6 6-6 6"/></svg></button>
+    </div>
+  </section>
+
+  <section class="how" id="how">
+    <p class="eyebrow">03 &mdash; How it works</p>
+    <h2>Three steps. No sign-up.</h2>
+    <ol class="steps">
+      <li><span class="n">01</span><h3>Connect your wallet</h3><p>No account and no custody. Your keys stay with you.</p></li>
+      <li><span class="n">02</span><h3>Set your policy</h3><p>Choose rescue and liquidation rules, or borrow with flash liquidity.</p></li>
+      <li><span class="n">03</span><h3>Let the contracts run</h3><p>Positions are monitored around the clock and act on your rules automatically.</p></li>
+    </ol>
+  </section>
+
+  <section class="part" id="partners">
+    <p class="eyebrow">04 &mdash; Ecosystem</p>
+    <h2>Partners</h2>
+    <p class="lede">Zeroth is designed around the open DeFi stack.</p>
+    <ul class="eco">
+      <li>Ethereum<small>EVM network</small></li><li>Uniswap<small>DEX swaps</small></li><li>Aave<small>Lending</small></li><li>Chainlink<small>Price oracles</small></li><li>The Graph<small>Indexing</small></li>
+    </ul>
+  </section>
+
+  <section class="closing">
+    <h2>Put your collateral on autopilot.</h2>
+    <p class="lede">Connect a wallet, set a policy and let the contracts do the watching.</p>
+    <div class="cta" style="margin-top:28px"><a class="go solid" href="/app">Launch app</a><a class="go ghost" href="#advantages">Explore advantages</a></div>
+  </section>
+
+  <footer>
+    <div class="about">
+      <a class="logo" href="#top"><svg class="mark" viewBox="0 0 40 44" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><defs><clipPath id="hx2"><path d="M20 2.5 36.5 12v20L20 41.5 3.5 32V12z"/></clipPath></defs><g clip-path="url(#hx2)"><path d="M21 4 3 26" stroke="#2f6bff" stroke-width="2"/><path d="M6 15l11 4.5" stroke="#2f6bff" stroke-width="1.6"/><path d="M35 11 5 31" stroke="#4be07a" stroke-width="2"/><path d="M33 17 13 38" stroke="#4be07a" stroke-width="1.5"/><path d="M22.5 27 29 38" stroke="#4be07a" stroke-width="1.8"/></g><path d="M20 2.5 36.5 12v20L20 41.5 3.5 32V12z" stroke="#e8f3f7" stroke-width="2.2"/><ellipse cx="20" cy="22.2" rx="5" ry="8.4" stroke="#e8f3f7" stroke-width="2.2"/></svg><span class="wm">ZEROTH</span></a>
+      <p>Zeroth is developing a fully on-chain platform for lending, trading and collateral protection.</p>
+    </div>
+    <div class="cols">
+      <div class="col"><b>Menu</b><a href="#top">Home</a><a href="#advantages">Advantages</a><a href="#modules">Modules</a><a href="#partners">Partners</a></div>
+      <div class="col"><b>Team</b><span>Sanskaar Singh</span><span>Gagan Shetty</span><span>Tejaswa Sharma</span></div>
+      <div class="col"><b>Event</b><span>Hack in Hills</span><span>Web3 India</span><span>Builder Base</span><span>Exido</span></div>
+    </div>
+  </footer>
+  <div class="legal"><span>&copy; 2026 Zeroth. All rights reserved.</span><span>Not financial advice. DeFi involves risk, including loss of funds.</span></div>
+</div>
+</main>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+  function toast(msg) {
+    var t = document.getElementById("toast");
+    t.textContent = msg; t.classList.add("show");
+    clearTimeout(toast._t); toast._t = setTimeout(function () { t.classList.remove("show"); }, 2800);
+  }
+
+  /* wallet */
+  var cbtn = document.getElementById("connect");
+  cbtn.addEventListener("click", function () {
+    var eth = window.ethereum;
+    if (!eth || !eth.request) { toast("No browser wallet found. Install MetaMask to connect."); return; }
+    eth.request({ method: "eth_requestAccounts" }).then(function (a) {
+      if (a && a[0]) { cbtn.textContent = a[0].slice(0, 6) + "…" + a[0].slice(-4); toast("Wallet connected"); }
+    }).catch(function () { toast("Connection was cancelled."); });
+  });
+
+  /* nav highlight */
+  var navLinks = document.querySelectorAll(".links a");
+  var map = [["top", 0], ["advantages", 1], ["modules", 2], ["partners", 3]];
+  function spy() {
+    var y = window.scrollY + window.innerHeight * 0.4, cur = 0;
+    map.forEach(function (m, i) { var el = document.getElementById(m[0]); if (el && el.getBoundingClientRect().top + window.scrollY <= y) cur = i; });
+    navLinks.forEach(function (a, i) { a.classList.toggle("on", i === cur); });
+  }
+  window.addEventListener("scroll", spy, { passive: true }); spy();
+
+  /* nav border once scrolled */
+  var nb = document.getElementById("navbar");
+  function stuck() { nb.classList.toggle("stuck", window.scrollY > 8); }
+  window.addEventListener("scroll", stuck, { passive: true }); stuck();
+
+  /* advantages scroller */
+  var at = document.getElementById("atrack");
+  function aStep(d) { var it = at.querySelector(".adv-item"); at.scrollBy({ left: d * it.offsetWidth, behavior: reduce ? "auto" : "smooth" }); }
+  document.getElementById("aprev").addEventListener("click", function () { aStep(-1); });
+  document.getElementById("anext").addEventListener("click", function () { aStep(1); });
+  var ap = document.getElementById("aprev"), an = document.getElementById("anext");
+  function aState() { ap.disabled = at.scrollLeft < 4; an.disabled = at.scrollLeft + at.clientWidth >= at.scrollWidth - 4; }
+  at.addEventListener("scroll", aState, { passive: true }); window.addEventListener("resize", aState); aState();
+
+  /* centered carousel */
+  var track = document.getElementById("track");
+  var cards = Array.prototype.slice.call(track.children);
+  function activate() {
+    var c = track.scrollLeft + track.clientWidth / 2, best = 0, bd = 1e9;
+    cards.forEach(function (el, i) { var d = Math.abs(el.offsetLeft + el.offsetWidth / 2 - c); if (d < bd) { bd = d; best = i; } });
+    cards.forEach(function (el, i) { el.classList.toggle("is-active", i === best); });
+    document.getElementById("prev").disabled = best === 0;
+    document.getElementById("next").disabled = best === cards.length - 1;
+  }
+  var raf = 0;
+  track.addEventListener("scroll", function () { cancelAnimationFrame(raf); raf = requestAnimationFrame(activate); }, { passive: true });
+  function step(d) { track.scrollBy({ left: d * (cards[0].offsetWidth + 22), behavior: reduce ? "auto" : "smooth" }); }
+  document.getElementById("prev").addEventListener("click", function () { step(-1); });
+  document.getElementById("next").addEventListener("click", function () { step(1); });
+  track.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowRight") { step(1); e.preventDefault(); }
+    if (e.key === "ArrowLeft") { step(-1); e.preventDefault(); }
+  });
+  window.addEventListener("resize", activate);
+  /* start centered on the second card, like the reference */
+  track.scrollLeft = cards[1].offsetWidth + 22;
+  activate();
+
+  /* star field */
+  var sc = document.getElementById("stars"), sx = sc.getContext("2d"), SW = 0, SH = 0, stars = [];
+  function sizeStars() {
+    SW = window.innerWidth; SH = window.innerHeight; sc.width = SW * dpr; sc.height = SH * dpr; sx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    sx.clearRect(0, 0, SW, SH);
+    var n = Math.round(SW * SH / 9000);
+    for (var i = 0; i < n; i++) {
+      var a = 0.08 + Math.random() * 0.4;
+      sx.fillStyle = "rgba(255,255,255," + a.toFixed(2) + ")";
+      var s = Math.random() < 0.1 ? 1.6 : 1;
+      sx.fillRect(Math.random() * SW, Math.random() * SH, s, s);
+    }
+  }
+  sizeStars();
+  var rz; window.addEventListener("resize", function () { clearTimeout(rz); rz = setTimeout(sizeStars, 200); });
+
+  /* hero swirl: luminous strands that converge at the ends and twist in the middle */
+  var cv = document.getElementById("swirl"), hero = document.getElementById("hero");
+  var ctx = cv.getContext("2d"), W = 0, H = 0, S = 90, dust = [], k;
+  for (k = 0; k < 700; k++) dust.push({ u: Math.random(), f: (Math.random() - .5) * 2, s: .01 + Math.random() * .03, a: .2 + Math.random() * .6 });
+  function size() {
+    var r = hero.getBoundingClientRect(); W = window.innerWidth; H = r.height;
+    cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  function pt(u, f, t) {
+    var x = W * (-0.05 + 1.1 * u);
+    var base = H * 0.47 + Math.sin(u * 5.0 - 1.1 + t * 0.12) * H * 0.17 + Math.sin(u * 2.0 + .4) * H * 0.07;
+    var env = Math.pow(Math.sin(Math.PI * Math.min(Math.max(u, 0), 1)), 0.7);
+    var tw = Math.cos(u * 8 + t * 0.35 + f * 2.6);
+    return [x, base + f * env * (H * 0.15) * (0.4 + 0.6 * tw)];
+  }
+  function trace(f, t) {
+    ctx.beginPath();
+    for (var j = 0; j <= 70; j++) { var p = pt(j / 70, f, t); if (j) ctx.lineTo(p[0], p[1]); else ctx.moveTo(p[0], p[1]); }
+  }
+  function draw(t) {
+    ctx.clearRect(0, 0, W, H);
+    ctx.globalCompositeOperation = "lighter";
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    var halo = [-.55, -.25, 0, .25, .55], i;
+    for (i = 0; i < halo.length; i++) { trace(halo[i], t); ctx.strokeStyle = "rgba(210,235,228," + (halo[i] === 0 ? .05 : .028) + ")"; ctx.lineWidth = halo[i] === 0 ? 38 : 22; ctx.stroke(); }
+    for (var s2 = 0; s2 < S; s2++) {
+      var f = s2 / (S - 1) * 2 - 1, c = 1 - Math.abs(f);
+      trace(f, t);
+      ctx.strokeStyle = "rgba(235,248,244," + (0.03 + 0.09 * c * c).toFixed(3) + ")";
+      ctx.lineWidth = 0.8; ctx.stroke();
+    }
+    var core = [[0, .55, 1.6], [-.07, .3, 1.1], [.07, .3, 1.1]];
+    for (i = 0; i < core.length; i++) { trace(core[i][0], t); ctx.strokeStyle = "rgba(255,255,255," + core[i][1] + ")"; ctx.lineWidth = core[i][2]; ctx.stroke(); }
+    for (var d = 0; d < dust.length; d++) {
+      var q = dust[d], p2 = pt(q.u, q.f, t), z = q.a > .7 ? 2 : 1.3;
+      ctx.fillStyle = "rgba(255,255,255," + (q.a * 0.6).toFixed(2) + ")";
+      ctx.fillRect(p2[0], p2[1], z, z);
+    }
+    ctx.globalCompositeOperation = "source-over";
+  }
+  size();
+  if (window.ResizeObserver) new ResizeObserver(function () { size(); if (reduce) draw(0); }).observe(hero);
+  else window.addEventListener("resize", size);
+  if (reduce) draw(0);
+  else {
+    var last = performance.now();
+    (function loop(now) {
+      var dt = Math.min((now - last) / 1000, .05); last = now;
+      for (var d = 0; d < dust.length; d++) { dust[d].u += dust[d].s * dt; if (dust[d].u > 1) dust[d].u -= 1; }
+      draw(now / 1000);
+      requestAnimationFrame(loop);
+    })(last);
+  }
+})();
+</script>

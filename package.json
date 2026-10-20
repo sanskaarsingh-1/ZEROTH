@@ -1,0 +1,1 @@
+{"name":"zeroth-integrated-mvp","version":"1.0.0","type":"module","private":true,"scripts":{"start":"node server.mjs","check":"node --check server.mjs && node --check public/app.js && node --check public/integrations.js"},"dependencies":{"ethers":"^6.15.0"},"engines":{"node":">=20"}}
